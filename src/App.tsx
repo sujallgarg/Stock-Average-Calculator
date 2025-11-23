@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Helmet } from "react-helmet";
 import {
   LineChart,
@@ -12,11 +12,10 @@ import {
 
 // Single-file React component for a Stock Average Calculator (Tailwind-ready)
 export default function StockAverageCalculator() {
-  const [input, setInput] = useState("");
   const [prices, setPrices] = useState([]);
   const [ticker, setTicker] = useState("");
   const [average, setAverage] = useState(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
 
   // Purchases: support N rows (array of { units, price })
   const [purchases, setPurchases] = useState([{ units: "", price: "" }]);
@@ -24,71 +23,18 @@ export default function StockAverageCalculator() {
   const [totalUnits, setTotalUnits] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
 
-  function parsePricesFromText(text) {
-    const tokens = text
-      .split(/[\n,;]+/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const result = [];
-    for (const tok of tokens) {
-      const pair = tok.includes(":") ? tok.split(":") : tok.split(/\s+/);
-      const maybePrice = pair.length > 1 ? pair[pair.length - 1] : pair[0];
-      const num = parseFloat(maybePrice.replace(/[^0-9.+-Ee]/g, ""));
-      if (!isNaN(num)) result.push(num);
-    }
-    return result;
-  }
-
-  function calculateAverage(arr) {
-    if (!arr || arr.length === 0) return null;
-    const sum = arr.reduce((s, v) => s + v, 0);
-    return sum / arr.length;
-  }
-
-  function handleComputeFromInput() {
-    setError("");
-    const parsed = parsePricesFromText(input);
-    if (parsed.length === 0) {
-      setError("No valid numeric prices found. Enter comma/newline separated numbers or date:price lines.");
-      setPrices([]);
-      setAverage(null);
-      return;
-    }
-    setPrices(parsed.map((p, i) => ({ index: i + 1, price: p })));
-    const avg = calculateAverage(parsed);
-    setAverage(avg);
-  }
-
-  function handleFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target.result;
-      const parsed = parsePricesFromText(text);
-      if (parsed.length === 0) {
-        setError("Uploaded file contained no valid numeric prices.");
-        setPrices([]);
-        setAverage(null);
-        return;
-      }
-      setPrices(parsed.map((p, i) => ({ index: i + 1, price: p })));
-      setAverage(calculateAverage(parsed));
-      setInput(text);
-      setError("");
-    };
-    reader.readAsText(file);
-  }
-
   function handleClear() {
-    setInput("");
+    setPurchases([{ units: "", price: "" }]);
     setPrices([]);
     setAverage(null);
+    setWeightedAverage(null);
+    setTotalUnits(0);
+    setTotalCost(0);
     setTicker("");
     setError("");
   }
 
-  function fmt(num) {
+  function fmt(num: number | null | undefined): string {
     if (num === null || num === undefined) return "—";
     return Number(num).toLocaleString(undefined, { maximumFractionDigits: 4 });
   }
@@ -150,7 +96,7 @@ export default function StockAverageCalculator() {
         <div className="w-full bg-[#0d1218] backdrop-blur-lg py-4 mb-6 border-b border-slate-700 sticky top-0 z-50">
           <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
             {/* <h1 className="text-xl font-semibold text-white tracking-wide">📈 Stock Average Pro</h1> */}
-            <img src="/Stock Average Pro Logo Design.png" alt="Stock Average Pro" className="w-25 h-15 cursor-pointer" url="https://localhost:5173/" />
+            <img src="/Stock Average Pro Logo Design.png" alt="Stock Average Pro" className="w-25 h-15 cursor-pointer" />
             <nav className="flex gap-6 text-slate-300 text-sm">
               <a className="hover:text-white cursor-pointer">Home</a>
               <a className="hover:text-white cursor-pointer">Calculator</a>
@@ -206,11 +152,14 @@ export default function StockAverageCalculator() {
                     ))}
                   </div>
 
+                  {error && (
+                    <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 mt-5">
-                    <button className="px-5 py-2 rounded-lg bg-yellow-400 text-slate-900 font-medium" onClick={() => {
-                      setPurchases([{ units: "", price: "" }]);
-                      setWeightedAverage(null); setTotalUnits(0); setTotalCost(0); setPrices([]); setAverage(null);
-                    }}>Clear Fields</button>
+                    <button className="px-5 py-2 rounded-lg bg-yellow-400 text-slate-900 font-medium" onClick={handleClear}>Clear Fields</button>
 
                     <button className="px-5 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium" onClick={() => {
                       let totalU = 0; let totalC = 0;
@@ -223,10 +172,10 @@ export default function StockAverageCalculator() {
                       if (totalU === 0) { setWeightedAverage(null); setError('Please enter units for at least one purchase.'); return; }
                       setError('');
                       const avg = totalC / totalU;
-                      setTotalUnits(totalU); setTotalCost(totalC); setWeightedAverage(avg);
-                      setAverage(avg);
+                      setTotalUnits(totalU); setTotalCost(totalC); setWeightedAverage(avg as unknown as null);
+                      setAverage(avg as unknown as null);
                       const parsed = purchases.filter(r=> (parseFloat(r.units)||0) > 0).map(r => parseFloat(r.price)||0);
-                      setPrices(parsed.map((p,i)=>({index:i+1, price:p})));
+                      setPrices(parsed.map((p: number, i: number) => ({index:i+1, price:p})) as unknown as never[]);
                     }}>Calculate Average</button>
                   </div>
 
@@ -256,7 +205,7 @@ export default function StockAverageCalculator() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-slate-300">Average</div>
-                    <div className="text-xl font-mono">{average !== null ? fmt(average) : "—"}</div>
+                    <div className="text-xl font-mono">{average !== null ? fmt(average as unknown as number) : "—"}</div>
                   </div>
                 </div>
 
@@ -265,7 +214,7 @@ export default function StockAverageCalculator() {
                     <div className="h-full flex items-center justify-center text-slate-400">No price data to chart — use the calculator above to see a chart.</div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={prices.map((p) => ({ name: p.index, price: p.price }))}>
+                      <LineChart data={prices.map((p: { index: number; price: number }) => ({ name: p.index, price: p.price }))}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
                         <YAxis domain={["dataMin", "dataMax"]} />
@@ -279,8 +228,8 @@ export default function StockAverageCalculator() {
                 <div className="mt-4 max-h-44 overflow-auto rounded-lg bg-slate-700/40 p-3">
                   <div className="text-sm text-slate-300 mb-2">Parsed prices (first 200 shown)</div>
                   <ol className="list-decimal pl-5 text-xs text-slate-200">
-                    {prices.slice(0, 200).map((p) => (
-                      <li key={p.index} className="leading-6">{fmt(p.price)}</li>
+                    {prices.slice(0, 200).map((p: { index: number; price: number }) => (
+                      <li key={p.index} className="leading-6">{fmt(p.price as unknown as number)}</li>
                     ))}
                   </ol>
                 </div>
